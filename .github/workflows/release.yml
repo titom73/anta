@@ -6,46 +6,6 @@ on:
       - published
 
 jobs:
-  release-coverage:
-    name: Updated ANTA release coverage badge
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v3
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
-      - name: Install dependencies
-        run: pip install genbadge[coverage] tox tox-gh-actions
-      - name: "Run pytest via tox for ${{ matrix.python }}"
-        run: tox
-      - name: Generate coverage badge
-        run: genbadge coverage -i .coverage.xml -o badge/latest-release-coverage.svg
-      - name: Publish coverage badge to gh-pages branch
-        uses: JamesIves/github-pages-deploy-action@v4
-        with:
-          branch: coverage-badge
-          folder: badge
-  release-doc:
-    name: "Publish documentation for release ${{github.ref_name}}"
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      - name: 'Setup Python 3 on runner'
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.x'
-      - name: Setup Git config
-        run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-
-      - name: 'Build mkdocs content to site folder'
-        run: |
-          pip install .[doc]
-          mike deploy --update-alias --push  ${{github.ref_name}} stable
   pypi:
     name: Publish version to Pypi servers
     runs-on: ubuntu-latest
@@ -66,6 +26,49 @@ jobs:
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
 
+  release-coverage:
+    name: Updated ANTA release coverage badge
+    runs-on: ubuntu-20.04
+    needs: [pypi]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install genbadge[coverage] tox tox-gh-actions
+      - name: "Run pytest via tox for ${{ matrix.python }}"
+        run: tox
+      - name: Generate coverage badge
+        run: genbadge coverage -i .coverage.xml -o badge/latest-release-coverage.svg
+      - name: Publish coverage badge to gh-pages branch
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: coverage-badge
+          folder: badge
+  release-doc:
+    name: "Publish documentation for release ${{github.ref_name}}"
+    runs-on: ubuntu-latest
+    needs: [release-coverage]
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: 'Setup Python 3 on runner'
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+      - name: Setup Git config
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: 'Build mkdocs content to site folder'
+        run: |
+          pip install .[doc]
+          mike deploy --update-alias --push  ${{github.ref_name}} stable
+
   docker:
     name: Docker Image Build
     runs-on: ubuntu-latest
@@ -76,6 +79,7 @@ jobs:
           - linux/amd64
           - linux/arm64
           - linux/arm/v7
+          - linux/arm/v8
     steps:
       - name: Checkout
         uses: actions/checkout@v3
