@@ -8,7 +8,8 @@ FROM python:${PYTHON_VER}-${IMG_OPTION} as BUILDER
 RUN pip install --upgrade pip
 
 WORKDIR /local
-COPY . /local
+COPY pyproject.toml /local/
+COPY anta /local/anta
 
 RUN python -m venv /opt/venv
 
